@@ -6,7 +6,7 @@ const {
     GroupSettingChange
 } = require('@adiwajshing/baileys')
 const fs = require('fs')
-const { banner, start, success } = require('./lib/functions')
+const { banner, start, success, getGroupAdmins } = require('./lib/functions')
 const { color } = require('./lib/color')
 const fetch = require("node-fetch")
 const moment = require("moment-timezone")
@@ -20,7 +20,7 @@ const starts = async (client = new WAConnection()) => {
     client.browserDescription = [ 'hehe boy', 'Chrome', '3.0' ]
     console.log(banner.string)
     client.on('qr', () => {
-        console.log(color('[','white'), color('!','red'), color(']','white'), color(' Scan bang'))
+        console.log(color('[','white'), color('!','blue'), color(']','white'), color(' Scan bang'))
     })
 
     fs.existsSync('./session.json') && client.loadAuthInfo('./session.json')
@@ -68,7 +68,9 @@ const starts = async (client = new WAConnection()) => {
           })
           client.on('group-participants-update', async (anu) => {
             try {
-            
+            groupMetadata = await client.groupMetadata(anu.jid)
+            groupMembers = groupMetadata.participants
+            groupAdmins = getGroupAdmins(groupMembers)
             mem = anu.participants[0]
                 console.log(anu)
                 try {
@@ -82,7 +84,7 @@ const starts = async (client = new WAConnection()) => {
                 pp_grup = 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png?q=60'
                 }
                 if (anu.action == 'add' && mem.includes(client.user.jid)) {
-                    client.sendMessage(anu.jid, 'okoklh', 'conversation')
+                    client.sendMessage(anu.jid, 'Halo! Terima Kasih sudah Mengundangku, Jika ingin Menggunakan Bot Ketik ${prefix}menu', 'conversation')
                     }
                      if (anu.action == 'add' && !mem.includes(client.user.jid)) {
                         mdata = await client.groupMetadata(anu.jid)
@@ -92,7 +94,7 @@ const starts = async (client = new WAConnection()) => {
                         anu_user = v.vname || v.notify || num.split('@')[0]
                         time_wel = moment.tz('Asia/Jakarta').format("HH:mm")
                         teks = `Halo ${anu_user} \n\nNama : \nUmur :\nGender : \nAsal :\n\nSemoga Betah dan jangan lupa isi\nAnd Following Rules Group`
-                        buff = await getBuffer(`http://hadi-api.herokuapp.com/api/card/welcome?nama=${anu_user}&descriminator=${time_wel}&memcount=${memeg}&gcname=${encodeURI(mdata.subject)}&pp=${pp_user}&bg=https://i.postimg.cc/rFkw8MpX/IMG-20210807-151325.jpg`)
+                        buff = await getBuffer(`http://hadi-api.herokuapp.com/api/card/welcome?nama=${anu_user}&descriminator=${groupMembers.length}&memcount=${memeg}&gcname=${encodeURI(mdata.subject)}&pp=${pp_user}&bg=https://i.postimg.cc/rFkw8MpX/IMG-20210807-151325.jpg`)
                         buttons = [{buttonId: `y`,buttonText:{displayText: 'Welcome👋'},type:1}]
                         imageMsg = (await client.prepareMessageMedia((buff), 'imageMessage', {thumbnail: buff})).imageMessage
                         buttonsMessage = { contentText: `${teks}`, footerText: 'Semoga betah ☕', imageMessage: imageMsg, buttons: buttons, headerType: 4 }
@@ -107,7 +109,7 @@ const starts = async (client = new WAConnection()) => {
                         time_wel = moment.tz('Asia/Jakarta').format("HH:mm")
                         memeg = mdata.participants.length
                         out = `Kenapa tuh? kok bisa keluar? \nSayonara ${anu_user} we will miss you`
-                        buff = await getBuffer(`http://hadi-api.herokuapp.com/api/card/goodbye?nama=${anu_user}&descriminator=${time_wel}&memcount=${memeg}&gcname=${encodeURI(mdata.subject)}&pp=${pp_user}&bg=https://i.postimg.cc/rFkw8MpX/IMG-20210807-151325.jpg`)
+                        buff = await getBuffer(`http://hadi-api.herokuapp.com/api/card/goodbye?nama=${anu_user}&descriminator=${groupMembers.length}&memcount=${memeg}&gcname=${encodeURI(mdata.subject)}&pp=${pp_user}&bg=https://i.postimg.cc/rFkw8MpX/IMG-20210807-151325.jpg`)
                         buttons = [{buttonId: `y`,buttonText:{displayText: 'Sayonara👋'},type:1}]
                         imageMsg = (await client.prepareMessageMedia((buff), 'imageMessage', {thumbnail: buff})).imageMessage
                         buttonsMessage = { contentText: `${out}`, footerText: 'Nitip gorengan ya', imageMessage: imageMsg, buttons: buttons, headerType: 4 }
