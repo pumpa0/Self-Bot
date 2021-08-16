@@ -9,6 +9,7 @@ const fs = require('fs')
 const { banner, start, success } = require('./lib/functions')
 const { color } = require('./lib/color')
 const fetch = require("node-fetch")
+const moment = require("moment-timezone")
 
 require('./index.js')
 nocache('./index.js', module => console.log(`${module} is now updated!`))
