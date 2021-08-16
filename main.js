@@ -80,24 +80,39 @@ const starts = async (client = new WAConnection()) => {
                 } catch (e) {
                 pp_grup = 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png?q=60'
                 }
-                if (anu.action == 'add') {
-                mdata = await client.groupMetadata(anu.jid)
-                memeg = mdata.participants.length
-                num = anu.participants[0]
-                anu_user = client.contacts[mem]
-                teks = `Halo @${num.split('@')[0]}\nWelcome in ${mdata.subject}\n\nSilahkan Intro ya\nNama : \nUmur : \nGender : \nAsal : \n\nSemoga Betah dan Jangan Lupa isi`
-                buff = await fetch(`https://pecundang.herokuapp.com/api/canvaswelbg?name=${encodeURI(anu_user.notify)}&member=${memeg}&avatar=${pp_user}&background=${pp_grup}&gcname=${encodeURI(mdata.subject)}&jumlahmem=${memeg}`)
-            client.sendMessage(mdata.id, buff, MessageType.image, {caption: teks, contextInfo: {"mentionedJid": [num]}})
-            }
-                if (anu.action == 'remove') {
-                    mdata = await client.groupMetadata(anu.jid)
-                    num = anu.participants[0]
-                    anu_user = client.contacts[mem]
-                    memeg = mdata.participants.length
-                    out = `Kenapa tuh? kok bisa keluar? \nSayonara @${num.split('@')[0]} we will miss you`
-                    buff = await fetch(`https://pecundang.herokuapp.com/api/canvasbyebg?name=${encodeURI(anu_user.notify)}&member=${memeg}&avatar=${pp_user}&background=${pp_grup}&gcname=${encodeURI(mdata.subject)}&jumlahmem=${memeg}`)
-                    client.sendMessage(mdata.id, buff, MessageType.image, {caption: out, contextInfo: {"mentionedJid": [num]}})
-                }
+                if (anu.action == 'add' && mem.includes(client.user.jid)) {
+                    client.sendMessage(anu.jid, 'okoklh', 'conversation')
+                    }
+                     if (anu.action == 'add' && !mem.includes(client.user.jid)) {
+                        mdata = await client.groupMetadata(anu.jid)
+                        memeg = mdata.participants.length
+                        num = anu.participants[0]
+                        let v = client.contacts[num] || { notify: num.replace(/@.+/, '') }
+                        anu_user = v.vname || v.notify || num.split('@')[0]
+                        time_wel = moment.tz('Asia/Jakarta').format("HH:mm")
+                        teks = `Halo ${anu_user} \n\nNama : \nUmur :\nGender : \nAsal :\n\nSemoga Betah dan jangan lupa isi\nAnd Following Rules Group`
+                        buff = await getBuffer(`http://hadi-api.herokuapp.com/api/card/welcome?nama=${anu_user}&descriminator=${time_wel}&memcount=${memeg}&gcname=${encodeURI(mdata.subject)}&pp=${pp_user}&bg=https://i.postimg.cc/rFkw8MpX/IMG-20210807-151325.jpg`)
+                        buttons = [{buttonId: `y`,buttonText:{displayText: 'Welcome👋'},type:1}]
+                        imageMsg = (await client.prepareMessageMedia((buff), 'imageMessage', {thumbnail: buff})).imageMessage
+                        buttonsMessage = { contentText: `${teks}`, footerText: 'Semoga betah ☕', imageMessage: imageMsg, buttons: buttons, headerType: 4 }
+                        prep = await client.prepareMessageFromContent(mdata.id,{buttonsMessage},{})
+                        client.relayWAMessage(prep)
+        }
+                    if (anu.action == 'remove' && !mem.includes(client.user.jid)) {
+                        mdata = await client.groupMetadata(anu.jid)
+                        num = anu.participants[0]
+                        let w = client.contacts[num] || { notify: num.replace(/@.+/, '') }
+                        anu_user = w.vname || w.notify || num.split('@')[0]
+                        time_wel = moment.tz('Asia/Jakarta').format("HH:mm")
+                        memeg = mdata.participants.length
+                        out = `Kenapa tuh? kok bisa keluar? \nSayonara ${anu_user} we will miss you`
+                        buff = await getBuffer(`http://hadi-api.herokuapp.com/api/card/goodbye?nama=${anu_user}&descriminator=${time_wel}&memcount=${memeg}&gcname=${encodeURI(mdata.subject)}&pp=${pp_user}&bg=https://i.postimg.cc/rFkw8MpX/IMG-20210807-151325.jpg`)
+                        buttons = [{buttonId: `y`,buttonText:{displayText: 'Sayonara👋'},type:1}]
+                        imageMsg = (await client.prepareMessageMedia((buff), 'imageMessage', {thumbnail: buff})).imageMessage
+                        buttonsMessage = { contentText: `${out}`, footerText: 'Nitip gorengan ya', imageMessage: imageMsg, buttons: buttons, headerType: 4 }
+                        prep = await client.prepareMessageFromContent(mdata.id,{buttonsMessage},{})
+                        client.relayWAMessage(prep)
+                    }
                 if (anu.action == 'promote') {
                 const mdata = await client.groupMetadata(anu.jid)
                 anu_user = client.contacts[mem]
