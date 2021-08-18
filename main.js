@@ -1,15 +1,19 @@
 const {
-    WAConnection,
+    WAConnection: _WAConnection,
     MessageType,
     Presence,
     Mimetype,
     GroupSettingChange
 } = require('@adiwajshing/baileys')
+const simple = require('./lib/simple.js')
+const WAConnection = simple.WAConnection(_WAConnection)
 const fs = require('fs')
 const { banner, start, success, getGroupAdmins } = require('./lib/functions')
 const { color } = require('./lib/color')
 const fetch = require("node-fetch")
 const moment = require("moment-timezone")
+
+blocked = []
 
 require('./index.js')
 nocache('./index.js', module => console.log(`${module} is now updated!`))
@@ -33,10 +37,29 @@ const starts = async (client = new WAConnection()) => {
     await client.connect({timeoutMs: 30*1000})
         fs.writeFileSync('./session.json', JSON.stringify(client.base64EncodedAuthInfo(), null, '\t'))
 
-    client.on('chat-update', async (message) => {
-        require('./index.js')(client, message)
-    })
-    
+    client.on('message-delete', async (m) => {
+        if (m.key.remoteJid == 'status@broadcast') return
+        if (!m.key.fromMe && m.key.fromMe) return
+        m.message = (Object.keys(m.message)[0] === 'ephemeralMessage') ? m.message.ephemeralMessage.message : m.message
+        const jam = moment.tz('Asia/Jakarta').format('HH:mm:ss')
+        let d = new Date
+        let locale = 'id'
+        let gmt = new Date(0).getTime() - new Date('1 Januari 2021').getTime()
+        let weton = ['Pahing', 'Pon','Wage','Kliwon','Legi'][Math.floor(((d * 1) + gmt) / 84600000) % 5]
+        let week = d.toLocaleDateString(locale, { weekday: 'long' })
+        let calender = d.toLocaleDateString(locale, {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+        })
+        const type = Object.keys(m.message)[0]
+        client.sendMessage(m.key.remoteJid, `\`\`\`「 Anti Delete 」\`\`\`
+        •> Nama : @${m.participant.split("@")[0]}
+        •> Waktu : ${jam} ${week} ${calender}
+        •> Type : ${type}`, MessageType.text, {quoted: m.message, contextInfo: {"mentionedJid": [m.participant]}})
+        
+        client.copyNForward(m.key.remoteJid, m.message)
+        })
         client.on('group-update', async (anu) => {
             metdata = await client.groupMetadata(anu.jid)
               if(anu.announce == 'false'){
@@ -68,10 +91,11 @@ const starts = async (client = new WAConnection()) => {
           })
           client.on('group-participants-update', async (anu) => {
             try {
-            groupMetadata = await client.groupMetadata(anu.jid)
-            groupMembers = groupMetadata.participants
+            groupMet = await client.groupMetadata(anu.jid)
+            groupMembers = groupMet.participants
             groupAdmins = getGroupAdmins(groupMembers)
             mem = anu.participants[0]
+            
                 console.log(anu)
                 try {
                 pp_user = await client.getProfilePicture(mem)
@@ -84,7 +108,7 @@ const starts = async (client = new WAConnection()) => {
                 pp_grup = 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_960_720.png?q=60'
                 }
                 if (anu.action == 'add' && mem.includes(client.user.jid)) {
-                    client.sendMessage(anu.jid, 'Halo! Terima Kasih sudah Mengundangku, Jika ingin Menggunakan Bot Ketik ${prefix}menu', 'conversation')
+                    client.sendMessage(anu.jid, 'Halo!', 'conversation')
                     }
                      if (anu.action == 'add' && !mem.includes(client.user.jid)) {
                         mdata = await client.groupMetadata(anu.jid)
@@ -97,7 +121,7 @@ const starts = async (client = new WAConnection()) => {
                         buff = await getBuffer(`http://hadi-api.herokuapp.com/api/card/welcome?nama=${anu_user}&descriminator=${groupMembers.length}&memcount=${memeg}&gcname=${encodeURI(mdata.subject)}&pp=${pp_user}&bg=https://i.postimg.cc/rFkw8MpX/IMG-20210807-151325.jpg`)
                         buttons = [{buttonId: `y`,buttonText:{displayText: 'Welcome👋'},type:1}]
                         imageMsg = (await client.prepareMessageMedia((buff), 'imageMessage', {thumbnail: buff})).imageMessage
-                        buttonsMessage = { contentText: `${teks}`, footerText: 'Semoga betah ☕', imageMessage: imageMsg, buttons: buttons, headerType: 4 }
+                        buttonsMessage = { contentText: `${stus ? tokss : teks}`, footerText: 'Semoga betah ☕', imageMessage: imageMsg, buttons: buttons, headerType: 4 }
                         prep = await client.prepareMessageFromContent(mdata.id,{buttonsMessage},{})
                         client.relayWAMessage(prep)
         }
@@ -148,6 +172,24 @@ const starts = async (client = new WAConnection()) => {
                 console.log('Error : %s', color(e, 'red'))
             }
         })
+
+        client.on('chat-update', async (message) => {
+            require('./index.js')(client, message)
+    })
+    isBattre = 'Not Detect' // 
+    isCharge = 'Not Detect' // 
+    client.on (`CB:action,,battery`, json => {
+                    const batteryLevelStr = json[2][0][1].value
+                    const batterylevel = parseInt (batteryLevelStr)
+                    isBattre = batterylevel + "%"
+                    isCharge = json[2][0][1].live
+    })
+    client.on('CB:Blocklist', json => {
+        if (blocked.length > 2) return
+        for (let i of json[1].blocklist) {
+            blocked.push(i.replace('c.us', 's.whatsapp.net'))
+        }
+    })
         }
         
         

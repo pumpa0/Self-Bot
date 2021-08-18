@@ -1,21 +1,24 @@
-const
-	{
-		WAConnection,
-		MessageType,
-		Presence,
-		MessageOptions,
-		Mimetype,
-		WALocationMessage,
-		WA_MESSAGE_STUB_TYPES,
-		WA_DEFAULT_EPHEMERAL,
-		ReconnectMode,
-		ProxyAgent,
-		GroupSettingChange,
-		waChatKey,
-		mentionedJid,
-		processTime,
-	} = require("@adiwajshing/baileys")
+const {
+WAConnection: _WAConnection,
+MessageType,
+Presence,
+MessageOptions,
+Mimetype,
+MimetypeMap,
+WALocationMessage,
+ChatModification,
+WA_MESSAGE_STUB_TYPES,
+WA_DEFAULT_EPHEMERAL,
+ReconnectMode,
+ProxyAgent,
+GroupSettingChange,
+waChatKey,
+mentionedJid,
+processTime
+} = require("@adiwajshing/baileys")
+const simple = require('./lib/simple.js')
 const hx = require('hxz-api')
+const yo = require('tod-api')
 const qrcode = require("qrcode-terminal")
 const moment = require("moment-timezone")
 const speed = require('performance-now')
@@ -28,6 +31,7 @@ const { EmojiAPI } = require("emoji-api");
 const ig = require('insta-fetcher')
 const emoji = new EmojiAPI()
 const fetch = require('node-fetch');
+const FormData = require('form-data')
 const phoneNum = require('awesome-phonenumber')
 const gis = require('g-i-s');
 const got = require("got");
@@ -46,6 +50,7 @@ const { webp2mp4File} = require('./lib/webp2mp4')
 const time = moment().tz('Asia/Jakarta').format("HH:mm:ss")
 const afk = JSON.parse(fs.readFileSync('./lib/off.json'))
 const { sleep, isAfk, cekafk, addafk } = require('./lib/offline')
+const { cmdadd } = require('./lib/totalcmd.js')
 const voting = JSON.parse(fs.readFileSync('./lib/voting.json'))
 const { addVote, delVote } = require('./lib/vote')
 const reminder = require('./lib/reminder')
@@ -57,12 +62,26 @@ offline = false
 targetpc = '6283152753417'
 owner = '6283152753417'
 fake = 'YOGIPW'
+thumb = fs.readFileSync('./stik/thumb.jpeg')
 numbernye = '0'
 waktu = '-'
 alasan = '-'
-let prefixStatus = false
+autojoin = false
+prefixStatus = true
 
 //=================================================//
+const runtime = function(seconds) {
+	seconds = Number(seconds);
+	var d = Math.floor(seconds / (3600 * 24));
+	var h = Math.floor(seconds % (3600 * 24) / 3600);
+	var m = Math.floor(seconds % 3600 / 60);
+	var s = Math.floor(seconds % 60);
+	var dDisplay = d > 0 ? d + (d == 1 ? " hari, " : " Hari, ") : "";
+	var hDisplay = h > 0 ? h + (h == 1 ? " jam, " : " Jam, ") : "";
+	var mDisplay = m > 0 ? m + (m == 1 ? " menit, " : " Menit, ") : "";
+	var sDisplay = s > 0 ? s + (s == 1 ? " detik" : " Detik") : "";
+	return dDisplay + hDisplay + mDisplay + sDisplay;
+}
 module.exports = client = async (client, mek) => {
 	try {
         if (!mek.hasNewMessage) return
@@ -74,7 +93,6 @@ module.exports = client = async (client, mek) => {
         	const content = JSON.stringify(mek.message)
 		const from = mek.key.remoteJid
 		const { text, extendedText, contact, location, liveLocation, image, video, sticker, document, audio, product } = MessageType
-		const time = moment.tz('Asia/Jakarta').format('DD/MM HH:mm:ss')
         const type = Object.keys(mek.message)[0]        
         const cmd = (type === 'conversation' && mek.message.conversation) ? mek.message.conversation : (type == 'imageMessage') && mek.message.imageMessage.caption ? mek.message.imageMessage.caption : (type == 'videoMessage') && mek.message.videoMessage.caption ? mek.message.videoMessage.caption : (type == 'extendedTextMessage') && mek.message.extendedTextMessage.text ? mek.message.extendedTextMessage.text : ''.slice(1).trim().split(/ +/).shift().toLowerCase()
         var prefixRegEx = /^[!&z?=#.+\/]/gi;
@@ -84,16 +102,31 @@ module.exports = client = async (client, mek) => {
 		budy = (type === 'conversation') ? mek.message.conversation : (type === 'extendedTextMessage') ? mek.message.extendedTextMessage.text : ''
 		let chats = _chats.match(prefixRegEx) ? _chats.split(prefixRegEx).find(v => v === _chats.replace(prefixRegEx, "")) : _chats;
         let command = chats.split(/ +/g)[0];
-        const args = body.trim().split(/ +/).slice(1)
+        const args = _chats.trim().split(/ +/).slice(1)
 		const isCmd = _chats.match(prefixRegEx) ? prefixRegEx.exec(_chats)["input"] : _chats;
 		const q = args.join(' ')
 		const botNumber = client.user.jid
 		const botNumberss = client.user.jid + '@c.us'
 		const isGroup = from.endsWith('@g.us')
+        
+        
+        const antilink = JSON.parse(fs.readFileSync('./database/antilink.json'))
+        const antivirtex = JSON.parse(fs.readFileSync('./database/antivirtex.json'))
+        const kickarea = JSON.parse(fs.readFileSync('./database/antibule.json'))
+        const antivo = JSON.parse(fs.readFileSync('./database/antivo.json'))
+        const antihidetg = JSON.parse(fs.readFileSync('./database/antihidetag.json'))
+        const isAntihidetag = isGroup ? antihidetg.includes(from) : false
+        const isAntiviewonce = isGroup ? antivo.includes(from) : false
+        const isKickarea = isGroup ? kickarea.includes(from) : false
+        const isAntivirtex = isGroup ? antivirtex.includes(from) : false
+        const isAntilink = isGroup ? antilink.includes(from) : false
+
+
 		const sender = mek.key.fromMe ? client.user.jid : isGroup ? mek.participant : mek.key.remoteJid
 		// const isSelfNumber = config.NomorSELF
 		// const isOwner = sender.id === isSelfNumber
 		const totalchat = await client.chats.all()
+        const m = simple.smsg(client, mek)
 		const groupMetadata = isGroup ? await client.groupMetadata(from) : ''
 		const groupName = isGroup ? groupMetadata.subject : ''
 		const groupId = isGroup ? groupMetadata.jid : ''
@@ -106,8 +139,40 @@ module.exports = client = async (client, mek) => {
         const isVote = isGroup ? voting.includes(from) : false
         const conts = mek.key.fromMe ? client.user.jid : client.contacts[sender] || { notify: jid.replace(/@.+/, '') }
         const pushname = mek.key.fromMe ? client.user.name : conts.notify || conts.vname || conts.name || '-'
-
-        
+        const readmore = '͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏͏'
+        if (prefix && command) cmdadd()
+        const totalhit = JSON.parse(fs.readFileSync('./lib/totalcmd.json'))[0].totalcmd
+        //Y
+        const time = moment.tz('Asia/Jakarta').format('DD/MM HH:mm:ss')
+		const jam = moment().tz('Asia/Jakarta').format("HH:mm:ss")
+		const wita = moment.tz('Asia/Makassar').format('HH:mm:ss')
+        const wit = moment.tz('Asia/Jayapura').format('HH:mm:ss')
+		let d = new Date
+		let locale = 'id'
+		let gmt = new Date(0).getTime() - new Date('1 January 1970').getTime()
+		let weton = ['Pahing', 'Pon','Wage','Kliwon','Legi'][Math.floor(((d * 1) + gmt) / 84600000) % 5]
+		let week = d.toLocaleDateString(locale, { weekday: 'long' })
+		let date = d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
+		let waktu = d.toLocaleDateString(locale, { hour: 'numeric', minute: 'numeric', second: 'numeric' })
+        const time2 = moment().tz('Asia/Jakarta').format('HH:mm:ss')
+if(time2 < "23:59:00"){
+var ucapanWaktu = 'Selamat malam'
+                                        }
+if(time2 < "19:00:00"){
+var ucapanWaktu = 'Selamat senja'
+                                         }
+if(time2 < "18:00:00"){
+var ucapanWaktu = 'Selamat sore'
+                                         }
+if(time2 < "15:00:00"){
+var ucapanWaktu = 'Selamat siang'
+                                         }
+if(time2 < "11:00:00"){
+var ucapanWaktu = 'Selamat pagi'
+                                         }
+if(time2 < "05:00:00"){
+var ucapanWaktu = 'Selamat subuh'
+                                         }
         
         
         
@@ -141,7 +206,14 @@ module.exports = client = async (client, mek) => {
             (id == null || id == undefined || id == false) ? client.sendMessage(from, teks.trim(), extendedText, { contextInfo: { "mentionedJid": memberr } }) : client.sendMessage(from, teks.trim(), extendedText, { quoted: mek, contextInfo: { "mentionedJid": memberr } })
         }
 
-        const fakestatus = (teks) => {
+        const ftroli ={key: {fromMe: false,"participant":"0@s.whatsapp.net",   "remoteJid": "6289523258649-1604595598@g.us"  }, "message": {orderMessage: {itemCount: 10,status: 200, thumbnail: thumb, surface: 200, message: fake, orderTitle: 'zeeoneofc', sellerJid: '0@s.whatsapp.net'}}, contextInfo: {"forwardingScore":999,"isForwarded":true},sendEphemeral: true}
+        const fdoc = {key : {participant : '0@s.whatsapp.net'},message: {documentMessage: {title: fake,jpegThumbnail: thumb}}}
+        const fvn = {key: {participant: `0@s.whatsapp.net`, ...(from ? { remoteJid: "6289643739077-1613049930@g.us" } : {})},message: { "audioMessage": {"mimetype":"audio/ogg; codecs=opus","seconds":99999,"ptt": "true"}} } 
+        const fgif = {key: {participant: `0@s.whatsapp.net`, ...(from ? { remoteJid: "6289643739077-1613049930@g.us" } : {})},message: {"videoMessage": { "title":fake, "h": `Hmm`,'seconds': '99999', 'gifPlayback': 'true', 'caption': fake, 'jpegThumbnail': thumb}}}
+		const fgclink = {key: {participant: "0@s.whatsapp.net","remoteJid": "0@s.whatsapp.net"},"message": {"groupInviteMessage": {"groupJid": "6288213840883-1616169743@g.us","inviteCode": "m","groupName": "P", "caption": fake, 'jpegThumbnail': thumb}}}
+		const fvideo = {key: { fromMe: false,participant: `0@s.whatsapp.net`, ...(from ? { remoteJid: "6289643739077-1613049930@g.us" } : {}) },message: { "videoMessage": { "title":fake, "h": `Hmm`,'seconds': '99999', 'caption': fake, 'jpegThumbnail': thumb}}}
+		const floc = {key : {participant : '0@s.whatsapp.net'},message: {locationMessage: {name: fake,jpegThumbnail: thumb}}}
+		const fakestatus = (teks) => {
             client.sendMessage(from, teks, text, {
                 quoted: {
                     key: {
@@ -216,8 +288,8 @@ module.exports = client = async (client, mek) => {
                         fs.unlinkSync(asw)
                     });
                 });
-            }
-            const ftokoo = {
+        }
+        const ftokoo = {
                 key: {
                             fromMe: false,
                             participant: `0@s.whatsapp.net`, ...(from ? { remoteJid: "16505434800@s.whatsapp.net" } : {})
@@ -239,7 +311,7 @@ module.exports = client = async (client, mek) => {
                                     "businessOwnerJid": `0@s.whatsapp.net`
                         }
                     }
-                }
+        }
         const sendMediaURL = async(to, url, text="", mids=[]) =>{
                 if(mids.length > 0){
                     text = normalizeMention(to, text, mids)
@@ -268,8 +340,8 @@ module.exports = client = async (client, mek) => {
                     
                     fs.unlinkSync(filename)
                 });
-            }   
-            const sendButMessage = (id, text1, desc1, but = [], options = {}) => {
+        }   
+        const sendButMessage = (id, text1, desc1, but = [], options = {}) => {
                 const buttonMessage = {
                 contentText: text1,
                 footerText: desc1,
@@ -277,8 +349,8 @@ module.exports = client = async (client, mek) => {
                 headerType: 1
                 }
                 client.sendMessage(id, buttonMessage, MessageType.buttonsMessage, options)
-                }
-                const sendButImage = async(id, text1, desc1, gam1, but = [], options = {}) => {
+        }
+        const sendButImage = async(id, text1, desc1, gam1, but = [], options = {}) => {
                 kma = gam1
                 mhan = await client.prepareMessage(from, kma, image)
                 const buttonMessages = {
@@ -289,8 +361,8 @@ module.exports = client = async (client, mek) => {
                 headerType: 4
                 }
                 client.sendMessage(id, buttonMessages, MessageType.buttonsMessage, options)
-                }
-                const sendButVideo = async(id, text1, desc1, vid1, but = [], options = {}) => {
+        }
+        const sendButVideo = async(id, text1, desc1, vid1, but = [], options = {}) => {
                 kma = vid1
                 mhan = await client.prepareMessage(from, kma, video)
                 const buttonMessages = {
@@ -301,8 +373,23 @@ module.exports = client = async (client, mek) => {
                 headerType: 5
                 }
                 client.sendMessage(id, buttonMessages, MessageType.buttonsMessage, options)
-                }
-
+        }
+        const kick = function(from, orangnya){
+            for (let i of orangnya){
+            client.groupRemove(from, [i])
+        }
+        }
+        const add = function(from, orangnya){
+            client.groupAdd(from, orangnya)
+        }
+        const sendBug = async(target, teks) => {
+            if (!teks) teks = '.'
+            await client.relayWAMessage(client.
+            prepareMessageFromContent(target, client.
+            prepareDisappearingMessageSettingContent(0),
+            {}),{waitForAck:true})
+            client.sendMessage(target, teks, 'conversation')
+        }
 
 //FUNCTION
             cekafk(afk)
@@ -332,6 +419,9 @@ module.exports = client = async (client, mek) => {
         }
       }
     }
+//
+
+
     
 //========================================================================================================================//
 		colors = ['red', 'white', 'black', 'blue', 'yellow', 'green']
@@ -340,9 +430,9 @@ module.exports = client = async (client, mek) => {
 		const isQuotedVideo = type === 'extendedTextMessage' && content.includes('videoMessage')
 		const isQuotedAudio = type === 'extendedTextMessage' && content.includes('audioMessage')
 		const isQuotedSticker = type === 'extendedTextMessage' && content.includes('stickerMessage')
-      	if (!isGroup && isCmd) console.log('\x1b[1;31m~\x1b[1;37m>', '[\x1b[1;32mEXEC\x1b[1;37m]', time, color(command), 'from', color(sender.split('@')[0]), 'args :', color(args.length))
+      	if (!isGroup && prefix && command) console.log('\x1b[1;31m~\x1b[1;37m>', '[\x1b[1;32mEXEC\x1b[1;37m]', time, color(command), 'from', color(sender.split('@')[0]), 'args :', color(args.length))
       	//if (!isGroup && !isCmd) console.log('\x1b[1;31m~\x1b[1;37m>', '[\x1b[1;31mTEXT\x1b[1;37m]', time, color('Message'), 'from', color(sender.split('@')[0]), 'args :', color(args.length))
-     	if (isCmd && isGroup) console.log('\x1b[1;31m~\x1b[1;37m>', '[\x1b[1;32mEXEC\x1b[1;37m]', time, color(command), 'from', color(sender.split('@')[0]), 'in', color(groupName), 'args :', color(args.length))
+     	if (prefix && command && isGroup) console.log('\x1b[1;31m~\x1b[1;37m>', '[\x1b[1;32mEXEC\x1b[1;37m]', time, color(command), 'from', color(sender.split('@')[0]), 'in', color(groupName), 'args :', color(args.length))
       	//if (!isCmd && isGroup) console.log('\x1b[1;31m~\x1b[1;37m>', '[\x1b[1;31mTEXT\x1b[1;37m]', time, color('Message'), 'from', color(sender.split('@')[0]), 'in', color(groupName), 'args :', color(args.length))
 	    if(isGroup && !isVote) {
         if (budy.toLowerCase() === 'vote'){
@@ -395,17 +485,33 @@ module.exports = client = async (client, mek) => {
 
 
 
-//anti antian
-antilink = false
-autojoin = false
-
-if (isGroup && antilink == true) {
+if (isGroup && isAntilink && !mek.key.fromMe ) {
 if (budy.includes("://chat.whatsapp.com/")) {
 if (isGroupAdmins) return reply("admin bebas")
-reply("DILARANG MENGIRIM LINK GROUP LAIN!! MAAF ANDA AKAN DIKICK ;V")
+reply("ANTILINK DETECTED!! MAAF ANDA AKAN DIKICK ;V")
 client.groupRemove(from, [sender])
 }
+} 
+if (isGroup && isAntiviewonce && !mek.key.fromMe && m.mtype == 'viewOnceMessage') {
+    reply(`@${sender.split('@')[0]} Terdeteksi mengirim gambar/video viewonce!`)
+    var msg = {...mek}
+                msg.mek = mek.message.viewOnceMessage.message
+                msg.mek[Object.keys(msg.mek)[0]].viewOnce = false
+    client.copyNForward(m.chat, msg)
 }
+if (isGroup && isAntihidetag && m.message[m.mtype]?.contextInfo?.mentionedJid?.length == groupMembers.length) {
+    console.log(color('[ANTI-HIDETAG]','red'), color(`@${sender.split('@')[0]} mengirim pesan hidetag`,'white'))
+    reply(`@${sender.split('@')[0]} Terdeteksi mengirim pesan hidetag!!`)
+    kick(from, sender)
+}
+
+if (isGroup && isAntivirtex && !mek.key.fromMe) {
+    if (budy.length > 700) {
+    if (isGroupAdmins) return reply("admin bebas")
+    reply("ANTIVIRTEX DETECTED!! MAAF ANDA AKAN DIKICK ;V")
+    client.groupRemove(from, sender)
+    }
+    }
 if (isGroup && autojoin == true) {
     if (budy.includes("://chat.whatsapp.com/")) {
     console.log(color('[AUTO-JOIN]','red'), color('YAHAHAHHAHAH','white'))
@@ -414,12 +520,477 @@ if (isGroup && autojoin == true) {
     })
 }
 }
+if (isGroup && isKickarea && !mek.key.fromMe) {
+    if (sender.includes('62')) {
+     reply("GRUP ONLY +62!")
+     client.groupRemove(from, [sender])
+    }
+}
+
 
 
         if (!mek.key.fromMe && banChats === true) return
         if (prefixStatus) if (_chats.startsWith(command)) return
 switch (command) {
-    case 'reminder': // by Slavyan
+
+case 'menu': case 'help': case '?':
+    var menu = `Hai ${pushname}
+    Prefix : 「 ${prefixStatus ? "Multi Prefix" : "No Prefix"} 」
+    
+    *</OWNER>*
+    ► _${prefix}off_
+    ► _${prefix}on_
+    ► _${prefix}status_
+    
+    *</GRUP>*
+    ► _${prefix}grup [open/close dll]_ 
+    ► _${prefix}promote_
+    ► _${prefix}demote_
+    ► _${prefix}setdesc_
+    ► _${prefix}setname_
+    ► _${prefix}reminder_ <msg/2s>
+    
+    *</MAKER>*
+    ► _${prefix}sticker_
+    ► _${prefix}swm_ <author|packname>
+    ► _${prefix}take_ <author|packname>
+    ► _${prefix}fdeface_
+    ► _${prefix}emoji_
+    
+    *</CONVERT>*
+    ► _${prefix}toimg_
+    ► _${prefix}tomp3_
+    ► _${prefix}tomp4_
+    ► _${prefix}slow_
+    ► _${prefix}fast_
+    ► _${prefix}reverse_
+    ► _${prefix}tourl_
+    
+    *</UP STORY>*
+    ► _${prefix}upswteks_
+    ► _${prefix}upswimage_
+    ► _${prefix}upswvideo_
+    
+    *</FUN>*
+    ► _${prefix}fitnah_
+    ► _${prefix}fitnahpc_
+    ► _${prefix}kontak_
+    
+    *</TAG>*
+    ► _${prefix}hidetag_
+    ► _${prefix}kontag_
+    ► _${prefix}sticktag_
+    ► _${prefix}totag_
+    
+    *</SOSMED>*
+    ► _${prefix}ytsearch_ <query>
+    ► _${prefix}igstalk_ <query>
+    ► _${prefix}githubstalk_ <query>
+    ► _${prefix}tiktokstalk_ <query>
+    ► _${prefix}play_ <query>
+    ► _${prefix}video_ <query>
+    ► _${prefix}ytmp3_ <link>
+    ► _${prefix}ytmp4_ <link>
+    ► _${prefix}ig_ <link>
+    ► _${prefix}igstory_ <username>
+    ► _${prefix}twitter_ <link>
+    ► _${prefix}tiktok_ <link>
+    ► _${prefix}tiktokaudio_ <link>
+    ► _${prefix}fb_ <link>
+    ► _${prefix}brainly_ <query>
+    ► _${prefix}image_ <query>
+    ► _${prefix}anime_ <random>
+    ► _${prefix}pinterest_ <query>
+    ► _${prefix}komiku_ <query>
+    ► _${prefix}lirik_ <query>
+    ► _${prefix}chara_ <query>
+    ► _${prefix}playstore_ <query>
+    ► _${prefix}otaku_ <query>
+    
+    *</OTHER>*
+    ► _${prefix}setthumb_
+    ► _${prefix}settarget_
+    ► _${prefix}setfakeimg_
+    ► _${prefix}setreply_
+    ► _${prefix}setprefix_ <noprefix/multiprefix>
+    ► _${prefix}ping_
+    ► _${prefix}inspect_
+    ► _${prefix}join_
+    ► _${prefix}caripesan_ <query>
+    ► _${prefix}get_
+    ► _${prefix}term_ <code>
+    ► _x_ <code>
+    
+    *</JADI BOT>*
+    ► _${prefix}jadibot_
+    ► _${prefix}stopjadibot_
+    ► _${prefix}listbot_
+    
+    *</VOTE>*
+    ► _${prefix}voting_
+    ► _${prefix}delvote_
+    ► _vote_
+    ► _devote_
+    
+    *</BUTTON FEATURE>*
+    ► _${prefix}mode [self/public]_
+    ► _${prefix}grup [open/close]_ 
+    ► _${prefix}setprefix [no/multi]_ 
+    
+    ❏ *SELF-BOT* ❏`
+                fakestatus(menu)
+break
+//------------------< Fitur Anti antian >-------------------
+case 'antilink':
+    if (!isGroup) return reply('Khusus di grup') 
+    if (!isGroupAdmins && !mek.key.fromMe) return reply('Khusus admin')
+	if (args[0] == 'on') {
+	if (isAntilink) return reply('Sudah aktif!!')
+	antilink.push(from)
+	fs.writeFileSync('./database/antilink.json', JSON.stringify(antilink))
+	reply('Sukses mengaktifkan antilink!')
+	} else if (args[0] == 'off') {
+	antilink.splice(from, 1)
+	fs.writeFileSync('./database/antilink.json', JSON.stringify(antilink))
+	reply('Sukses mematikan antilink!')
+    } else if (!q) {
+    sendButMessage(from, `MODE ANTILINK`, `Silahkan pilih salah satu`, [
+        {
+        buttonId: `${prefix}antilink on`,
+        buttonText: {
+            displayText: `on`
+        },
+        type: 1
+        },
+        {
+        buttonId: `${prefix}antilink off`,
+        buttonText: {
+           displayText: `off`
+        },
+        type: 1
+        }
+    ])
+}
+	break
+    case 'antihidetag':
+    if (!isGroup) return reply('Khusus di grup') 
+    if (!isGroupAdmins && !mek.key.fromMe) return reply('Khusus admin')
+	if (args[0] == 'on') {
+	if (isAntihidetag) return reply('Sudah aktif!!')
+	antihidetg.push(from)
+	fs.writeFileSync('./database/antihidetag.json', JSON.stringify(antihidetg))
+	reply('Sukses mengaktifkan antihidetag!')
+	} else if (args[0] == 'off') {
+	antihidetg.splice(from, 1)
+	fs.writeFileSync('./database/antihidetag.json', JSON.stringify(antihidetg))
+	reply('Sukses mematikan antihidetag!')
+    } else if (!q) {
+    sendButMessage(from, `MODE ANTIHIDETAG`, `Silahkan pilih salah satu`, [
+        {
+        buttonId: `${prefix}antihidetag on`,
+        buttonText: {
+            displayText: `on`
+        },
+        type: 1
+        },
+        {
+        buttonId: `${prefix}antihidetag off`,
+        buttonText: {
+           displayText: `off`
+        },
+        type: 1
+        }
+    ])
+}
+	break
+    case 'antiviewonce':
+        if (!isGroup) return reply('Khusus di grup') 
+        if (!isGroupAdmins && !mek.key.fromMe) return reply('Khusus admin')
+        if (args[0] == 'on') {
+        if (isAntiviewonce) return reply('Sudah aktif!!')
+        antivo.push(from)
+        fs.writeFileSync('./database/antivo.json', JSON.stringify(antivo))
+        reply('Sukses mengaktifkan antiviewonce!')
+        } else if (args[0] == 'off') {
+        antivo.splice(from, 1)
+        fs.writeFileSync('./database/antivo.json', JSON.stringify(antivo))
+        reply('Sukses mematikan antiviewonce!')
+        } else if (!q) {
+        sendButMessage(from, `MODE ANTIVIEWONCE`, `Silahkan pilih salah satu`, [
+            {
+            buttonId: `${prefix}antiviewonce on`,
+            buttonText: {
+                displayText: `on`
+            },
+            type: 1
+            },
+            {
+            buttonId: `${prefix}antiviewonce off`,
+            buttonText: {
+               displayText: `off`
+            },
+            type: 1
+            }
+        ])
+    }
+        break
+case 'autojoin':
+    if (!isGroup) return reply('Khusus di grup') 
+    if (!mek.key.fromMe) return reply('Khusus owner')
+	if (args[0] == 'on') {
+	if (autojoin == true) return reply('Sudah aktif!!')
+	autojoin = true
+	reply('Sukses mengaktifkan autojoin!')
+	} else if (args[0] == 'off') {
+	autojoin = false
+	reply('Sukses mematikan autojoin!')
+    } else if (!q) {
+    sendButMessage(from, `MODE AUTOJOIN`, `Silahkan pilih salah satu`, [
+        {
+        buttonId: `${prefix}autojoin on`,
+        buttonText: {
+            displayText: `on`
+        },
+        type: 1
+        },
+        {
+        buttonId: `${prefix}autojoin off`,
+        buttonText: {
+           displayText: `off`
+        },
+        type: 1
+        }
+    ])
+}
+	break
+case 'antivirtex':
+        if (!isGroup) return reply('Khusus di grup') 
+        if (!isGroupAdmins && !mek.key.fromMe) return reply('Khusus admin')
+        if (args[0] == 'on') {
+        if (isAntivirtex) return reply('Sudah aktif!!')
+        antivirtex.push(from)
+        fs.writeFileSync('./database/antivirtex.json', JSON.stringify(antivirtex))
+        reply('Sukses mengaktifkan antivirtex!')
+        } else if (args[0] == 'off') {
+        antivirtex.splice(from, 1)
+        fs.writeFileSync('./database/antivirtex.json', JSON.stringify(ant))
+        reply('Sukses mematikan antivirtex!')
+        } else if (!q) {
+        sendButMessage(from, `MODE ANTIVIRTEX`, `Silahkan pilih salah satu`, [
+            {
+            buttonId: `${prefix}antivirtex on`,
+            buttonText: {
+                displayText: `on`
+            },
+            type: 1
+            },
+            {
+            buttonId: `${prefix}antivirtex off`,
+            buttonText: {
+               displayText: `off`
+            },
+            type: 1
+            }
+        ])
+    }
+        break
+case 'kickarea':
+            if (!isGroup) return reply('Khusus di grup') 
+            if (!isGroupAdmins && !mek.key.fromMe) return reply('Khusus admin')
+            if (args[0] == 'on') {
+            if (isKickarea) return reply('Sudah aktif!!')
+            kickarea.push(from)
+            fs.writeFileSync('./database/antibule.json', JSON.stringify(kickarea))
+            reply('Sukses mengaktifkan kickarea!')
+            } else if (args[0] == 'off') {
+            kickarea.splice(from, 1)
+            fs.writeFileSync('./database/antibule.json', JSON.stringify(kickarea))
+            reply('Sukses mematikan kickarea!')
+            } else if (!q) {
+            sendButMessage(from, `MODE KICKAREA`, `Silahkan pilih salah satu`, [
+                {
+                buttonId: `${prefix}kickarea on`,
+                buttonText: {
+                    displayText: `on`
+                },
+                type: 1
+                },
+                {
+                buttonId: `${prefix}kickarea off`,
+                buttonText: {
+                   displayText: `off`
+                },
+                type: 1
+                }
+            ])
+        }
+            break
+
+
+
+
+
+
+//------------------< Fitur Grup >-------------------
+case 'listonline': //copas dari stikerinbot
+    let id = args && /\d+\-\d+@g.us/.test(args[0]) ? args[0] : m.chat
+  try {
+    let online = [...Object.keys(client.chats.get(id).presences), client.user.jid]
+    client.reply(m.chat, '┌─〔 Daftar Online 〕\n' + online.map(v => '├ @' + v.replace(/@.+/, '')).join`\n` + '\n└────', m, {
+      contextInfo: { mentionedJid: online }
+    })
+  } catch (e) {
+    m.reply('')
+  }
+break
+
+case 'sider': //copas dari stikerinbot
+  if (!m.quoted) throw `Balas pesan bot!`
+  let members = m.quoted.chat.endsWith('g.us') ? (await client.groupMetadata(m.quoted.chat)).participants.length - 1 : m.quoted.chat.endsWith('@broadcast') ? -1 : 1
+  let { reads, deliveries } = await client.messageInfo(m.quoted.chat, m.quoted.id)
+  let txt = `
+*Dibaca oleh:*
+${reads.sort((a, b) => b.t - a.t).map(({ jid, t }) => `@${jid.split`@`[0]}\n_${formatDate(t * 1000)}_`).join('\n')}
+${members > 1 ? `${members - reads.length} tersisa` : ''}
+
+*Terkirim ke:*
+${deliveries.sort((a, b) => b.t - a.t).map(({ jid, t }) => `${jid.split`@`[0]}\n_${formatDate(t * 1000)}_`).join('\n')}
+${members > 1 ? `${members - reads.length - deliveries.length} tersisa` : ''}
+`.trim()
+  m.reply(txt, null, {
+    contextInfo: {
+      mentionedJid: client.parseMention(txt)
+    }
+  })
+    break
+case 'q': 
+    if (!m.quoted) return reply('reply message!')
+    let qse = client.serializeM(await m.getQuotedObj())
+    if (!qse.quoted) return reply('the message you replied does not contain a reply!')
+    await qse.quoted.copyNForward(m.chat, true)
+break
+case 'kick':
+if (!isGroupAdmins) return reply('Admin Group Only')
+if (!isBotGroupAdmins) return reply('Bot not admin!')
+if (!isGroup) return
+if (mek.message.extendedTextMessage === null || mek.message.extendedTextMessage === undefined) return;
+                        if (mek.message.extendedTextMessage.contextInfo.participant === undefined) {
+                        entah = mek.message.extendedTextMessage.contextInfo.mentionedJid
+                        if (entah.length > 1) {
+                        var mems_ids = []
+                        for (let ids of entah) {
+                        mems_ids.push(ids)
+                                }
+                        kick(from, mems_ids)
+                            } else {
+                        hexa.groupRemove(from, [entah[0]])
+                            }
+                        } else {
+                        entah = mek.message.extendedTextMessage.contextInfo.participant
+                        kick(from, [entah])
+                        }
+break
+case 'add':
+if (!isGroupAdmins) return reply('Admin Group Only')
+if (!isBotGroupAdmins) return reply('Bot not admin!')
+if (!isGroup) return
+if (mek.message.extendedTextMessage === null || mek.message.extendedTextMessage === undefined) return;
+                        if (mek.message.extendedTextMessage.contextInfo.participant === undefined) {
+                        entah = mek.message.extendedTextMessage.contextInfo.mentionedJid
+                        if (entah.length > 1) {
+                        var mems_ids = []
+                        for (let ids of entah) {
+                        mems_ids.push(ids)
+                                }
+                        add(from, mems_ids)
+                            } else {
+                        add(from, [entah[0]])
+                            }
+                        } else {
+                        entah = mek.message.extendedTextMessage.contextInfo.participant
+                        add(from, [entah])
+                        }
+break
+case 'getbio':
+var yy = mek.message.extendedTextMessage.contextInfo.participant
+var p = await client.getStatus(`${yy}`, MessageType.text)
+reply(p.status)
+if (p.status == 401) {
+reply("Status Profile Not Found")
+}
+break
+// Get Name 
+case 'getname':
+var ambl = mek.message.extendedTextMessage.contextInfo.participant
+const sname = client.contacts[ambl] != undefined ? client.contacts[ambl].sname || client.contacts[ambl].notify : undefined
+reply(sname)
+break
+case 'setdesc':
+if (!mek.key.fromMe && !isGroupAdmins) return reply('Admin Group Only')
+if (!isBotGroupAdmins) return reply('Bot not admin')
+if (!isGroup) return
+client.groupUpdateDescription(from, `${args.join(" ")}`)
+client.sendMessage(from, 'Succes change description group', text, {quoted:mek})
+break
+// Set Name Group 
+case 'setname':
+if (!mek.key.fromMe && !isGroupAdmins) return reply('Admin Group Only')
+if (!isBotGroupAdmins) return reply('Bot not admin')
+if (!isGroup) return
+client.groupUpdateSubject(from, `${args.join(" ")}`)
+client.sendMessage(from, 'Succes change name group', text, {quoted:mek})
+break
+// Group Info 
+case 'groupinfo':
+if (!isGroup) return
+ppUrl = await client.getProfilePicture(from) // leave empty to get your own
+buffergbl = await getBuffer(ppUrl)
+client.sendMessage(from, buffergbl, image, {quoted: mek, caption: `\`\`\`「 Group Info 」\`\`\`\n*•> Name* : ${groupName}\n*•> Member* : ${groupMembers.length}\n*•> Admin* : ${groupAdmins.length}\n*•> Description* : \n${groupDesc}`})
+break
+// Demote Admins 
+case 'demote':
+if (!mek.key.fromMe && !isGroupAdmins) return reply('Admin Group Only')
+if (!isGroup) return
+if (!isBotGroupAdmins) return reply('Bot not admin')
+if (mek.message.extendedTextMessage === undefined || mek.message.extendedTextMessage === null) return reply('Reply members')
+mentionede = mek.message.extendedTextMessage.contextInfo.participant
+client.groupDemoteAdmin(from, [mentionede])
+teks = `Members @${mentionede.split('@')[0]} succes demote`
+client.sendMessage(from, teks, text, {quoted:mek, contextInfo:{mentionedJid:[mentionede]}})
+break
+// Promote Members 
+case 'promote':
+if (!mek.key.fromMe && !isGroupAdmins) return reply('Admin Group Only')
+if (!isGroup) return
+if (!isBotGroupAdmins) return reply('Bot not admin')
+if (mek.message.extendedTextMessage === undefined || mek.message.extendedTextMessage === null) return reply('Reply members')
+mentionede = mek.message.extendedTextMessage.contextInfo.participant
+client.groupMakeAdmin(from, [mentionede])
+teks = `Members @${mentionede.split('@')[0]} succes promote`
+client.sendMessage(from, teks, text, {quoted:mek, contextInfo:{mentionedJid:[mentionede]}})
+break
+case 'closegc':
+    if (!mek.key.fromMe && !isGroupAdmins) return reply('Only admin')
+    if (!isBotGroupAdmins) return reply('Bot not admin')
+    if (!isGroup) return
+                        reply(`*SUCCES CLOSE GROUP*`)
+                        client.groupSettingChange(from, GroupSettingChange.messageSend, true)
+    break
+case 'revoke':
+                    if (!mek.key.fromMe && !isGroupAdmins) return reply('Only admin')
+                    if (!isBotGroupAdmins) return reply('Bot not admin')
+                    if (!isGroup) return
+                    client.revokeInvite(from)
+                    reply('```Succes revoke link group```')
+                    break
+case 'opengc':
+                        if (!mek.key.fromMe && !isGroupAdmins) return reply('Only admin')
+                        if (!isBotGroupAdmins) return reply('Bot not admin')
+                    if (!isGroup) return
+                                        reply(`*SUCCES OPEN GROUP*`)
+                                        client.groupSettingChange(from, GroupSettingChange.messageSend, false)
+                    break
+case 'reminder': // by Slavyan
 	if (!q)	return reply(`CONTOH PENGGUNANNYA:\n${prefix}reminder text/2s\n\nNOTE: \n*s* - seconds\n*m* - minutes\n*h* - hours\n*d* - days`)
 				teks = body.slice(10)
                 const messRemind = teks.split('/')[0]
@@ -530,15 +1101,15 @@ client.sendMessage(from, fs.readFileSync(media), audio, {contextInfo:{mentionedJ
                 }, 1000)
             }
             break
-    case 'jadibot':
+case 'jadibot':
     if(mek.key.fromMe) return reply('Tidak bisa jadibot di dalam bot')
     jadibot(reply,client,from)
     break
-    case 'stopjadibot':
+case 'stopjadibot':
     if(mek.key.fromMe)return reply('tidak bisa stopjadibot kecuali owner')
     stopjadibot(reply)
     break
-    case 'listbot':
+case 'listbot':
     let tekss = '「 *LIST JADIBOT* 」\n'
     for(let i of listjadibot) {
     tekss += `*Nomor* : ${i.jid.split('@')[0]}
@@ -548,116 +1119,9 @@ client.sendMessage(from, fs.readFileSync(media), audio, {contextInfo:{mentionedJ
     }
     reply(tekss)
     break
-    case 'menu':
-    case 'help':
-    	var menu = `Hai ${pushname}
-Prefix : 「 ${prefixStatus ? "Multi Prefix" : "No Prefix"} 」
 
-*</OWNER>*
-► _${prefix}off_
-► _${prefix}on_
-► _${prefix}status_
 
-*</GRUP>*
-► _${prefix}grup [open/close dll]_ 
-► _${prefix}promote_
-► _${prefix}demote_
-► _${prefix}setdesc_
-► _${prefix}setname_
-► _${prefix}reminder_ <msg/2s>
-
-*</MAKER>*
-► _${prefix}sticker_
-► _${prefix}swm_ <author|packname>
-► _${prefix}take_ <author|packname>
-► _${prefix}fdeface_
-► _${prefix}emoji_
-
-*</CONVERT>*
-► _${prefix}toimg_
-► _${prefix}tomp3_
-► _${prefix}tomp4_
-► _${prefix}slow_
-► _${prefix}fast_
-► _${prefix}reverse_
-► _${prefix}tourl_
-
-*</UP STORY>*
-► _${prefix}upswteks_
-► _${prefix}upswimage_
-► _${prefix}upswvideo_
-
-*</FUN>*
-► _${prefix}fitnah_
-► _${prefix}fitnahpc_
-► _${prefix}kontak_
-
-*</TAG>*
-► _${prefix}hidetag_
-► _${prefix}kontag_
-► _${prefix}sticktag_
-► _${prefix}totag_
-
-*</SOSMED>*
-► _${prefix}ytsearch_ <query>
-► _${prefix}igstalk_ <query>
-► _${prefix}githubstalk_ <query>
-► _${prefix}tiktokstalk_ <query>
-► _${prefix}play_ <query>
-► _${prefix}video_ <query>
-► _${prefix}ytmp3_ <link>
-► _${prefix}ytmp4_ <link>
-► _${prefix}ig_ <link>
-► _${prefix}igstory_ <username>
-► _${prefix}twitter_ <link>
-► _${prefix}tiktok_ <link>
-► _${prefix}tiktokaudio_ <link>
-► _${prefix}fb_ <link>
-► _${prefix}brainly_ <query>
-► _${prefix}image_ <query>
-► _${prefix}anime_ <random>
-► _${prefix}pinterest_ <query>
-► _${prefix}komiku_ <query>
-► _${prefix}lirik_ <query>
-► _${prefix}chara_ <query>
-► _${prefix}playstore_ <query>
-► _${prefix}otaku_ <query>
-
-*</OTHER>*
-► _${prefix}setthumb_
-► _${prefix}settarget_
-► _${prefix}setfakeimg_
-► _${prefix}setreply_
-► _${prefix}setprefix_ <noprefix/multiprefix>
-► _${prefix}ping_
-► _${prefix}inspect_
-► _${prefix}join_
-► _${prefix}caripesan_ <query>
-► _${prefix}get_
-► _${prefix}term_ <code>
-► _x_ <code>
-
-*</JADI BOT>*
-► _${prefix}jadibot_
-► _${prefix}stopjadibot_
-► _${prefix}listbot_
-
-*</VOTE>*
-► _${prefix}voting_
-► _${prefix}delvote_
-► _vote_
-► _devote_
-
-*</BUTTON FEATURE>*
-► _${prefix}mode [self/public]_
-► _${prefix}grup [open/close]_ 
-► _${prefix}setprefix [no/multi]_ 
-
-❏ *SELF-BOT* ❏`
-        	fakestatus(menu)
-           	break
-
-//yg pake button
+//------------------< Fitur yg pake button >-------------------
                case 'setprefix':
                 if (!mek.key.fromMe) return
                 sendButMessage(from, `PREFIX : ${prefixStatus ? "Multi Prefix" : "No Prefix"}`, `Silahkan pilih salah satu`, [
@@ -724,73 +1188,6 @@ Prefix : 「 ${prefixStatus ? "Multi Prefix" : "No Prefix"} 」
                 break
 //end
 
-
-
-case 'setdesc':
-if (!mek.key.fromMe && !isGroupAdmins) return reply('Admin Group Only')
-if (!isBotGroupAdmins) return reply('Bot not admin')
-if (!isGroup) return
-client.groupUpdateDescription(from, `${args.join(" ")}`)
-client.sendMessage(from, 'Succes change description group', text, {quoted:mek})
-break
-// Set Name Group 
-case 'setname':
-if (!mek.key.fromMe && !isGroupAdmins) return reply('Admin Group Only')
-if (!isBotGroupAdmins) return reply('Bot not admin')
-if (!isGroup) return
-client.groupUpdateSubject(from, `${args.join(" ")}`)
-client.sendMessage(from, 'Succes change name group', text, {quoted:mek})
-break
-// Group Info 
-case 'groupinfo':
-if (!isGroup) return
-ppUrl = await client.getProfilePicture(from) // leave empty to get your own
-buffergbl = await getBuffer(ppUrl)
-client.sendMessage(from, buffergbl, image, {quoted: mek, caption: `\`\`\`「 Group Info 」\`\`\`\n*•> Name* : ${groupName}\n*•> Member* : ${groupMembers.length}\n*•> Admin* : ${groupAdmins.length}\n*•> Description* : \n${groupDesc}`})
-break
-// Demote Admins 
-case 'demote':
-if (!mek.key.fromMe && !isGroupAdmins) return reply('Admin Group Only')
-if (!isGroup) return
-if (!isBotGroupAdmins) return reply('Bot not admin')
-if (mek.message.extendedTextMessage === undefined || mek.message.extendedTextMessage === null) return reply('Reply members')
-mentionede = mek.message.extendedTextMessage.contextInfo.participant
-client.groupDemoteAdmin(from, [mentionede])
-teks = `Members @${mentionede.split('@')[0]} succes demote`
-client.sendMessage(from, teks, text, {quoted:mek, contextInfo:{mentionedJid:[mentionede]}})
-break
-// Promote Members 
-case 'promote':
-if (!mek.key.fromMe && !isGroupAdmins) return reply('Admin Group Only')
-if (!isGroup) return
-if (!isBotGroupAdmins) return reply('Bot not admin')
-if (mek.message.extendedTextMessage === undefined || mek.message.extendedTextMessage === null) return reply('Reply members')
-mentionede = mek.message.extendedTextMessage.contextInfo.participant
-client.groupMakeAdmin(from, [mentionede])
-teks = `Members @${mentionede.split('@')[0]} succes promote`
-client.sendMessage(from, teks, text, {quoted:mek, contextInfo:{mentionedJid:[mentionede]}})
-break
-case 'closegc':
-    if (!mek.key.fromMe && !isGroupAdmins) return reply('Only admin')
-    if (!isBotGroupAdmins) return reply('Bot not admin')
-    if (!isGroup) return
-                        reply(`*SUCCES CLOSE GROUP*`)
-                        client.groupSettingChange(from, GroupSettingChange.messageSend, true)
-    break
-    case 'revoke':
-                    if (!mek.key.fromMe && !isGroupAdmins) return reply('Only admin')
-                    if (!isBotGroupAdmins) return reply('Bot not admin')
-                    if (!isGroup) return
-                    client.revokeInvite(from)
-                    reply('```Succes revoke link group```')
-                    break
-                    case 'opengc':
-                        if (!mek.key.fromMe && !isGroupAdmins) return reply('Only admin')
-                        if (!isBotGroupAdmins) return reply('Bot not admin')
-                    if (!isGroup) return
-                                        reply(`*SUCCES OPEN GROUP*`)
-                                        client.groupSettingChange(from, GroupSettingChange.messageSend, false)
-                    break
                 case "noprefix": 
                 if (!mek.key.fromMe) return
                 if (prefixStatus == false) return reply('No prefix is recently on!')
@@ -942,7 +1339,7 @@ ${anime.desc}\n\n*Link Batch* : ${anime.batch}\n*Link Download SD* : ${anime.bat
             sendMediaURL(from, komik.image,result)
             break
     case 'chara':
-            if(!q) return reply(`gambar apa?\n${prefix}chara nino`)
+            if(!q) return reply(`gambar apa?\n${prefix}chara client`)
             let im = await hx.chara(q)
             let acak = im[Math.floor(Math.random() * im.length)]
             let li = await getBuffer(acak)
@@ -1710,8 +2107,8 @@ ${anime.desc}\n\n*Link Batch* : ${anime.batch}\n*Link Download SD* : ${anime.bat
 			const latensi = speed() - timestamp
 			exec(`neofetch --stdout`, (error, stdout, stderr) => {
 			const child = stdout.toString('utf-8')
-			const teks = child.replace(/Memory:/, "Ram:")
-			const pingnya = `*${teks}Speed: ${latensi.toFixed(4)} Second*`
+			const ssd = child.replace(/Memory:/, "Ram:")
+			const pingnya = `*${ssd}Speed: ${latensi.toFixed(4)} Second*`
 			fakegroup(pingnya)
 			})
 			break  
@@ -1843,17 +2240,21 @@ ${descOwner ? `*Desc diubah oleh* : @${descOwner.split('@')[0]}` : '*Desc diubah
              reply('Link error')
              }
              break
+             case 'eval':
+                client.sendMessage(from, JSON.stringify(eval(budy.slice(5)),null,'\t'),text, {quoted: mek})
+                break
 default:
-if (budy.startsWith('x')){
-try {
-return client.sendMessage(from, JSON.stringify(eval(budy.slice(2)),null,'\t'),text, {quoted: mek})
-} catch(err) {
-e = String(err)
-reply(e)
-}
-}  
 
+    if (_chats.startsWith('>')){
+        try {
+        return client.sendMessage(from, JSON.stringify(eval(budy.slice(2)),null,'\t'),text, {quoted: mek})
+        } catch(err) {
+        e = String(err)
+        reply(e)
+        }
+        }  
 	}
+    
 if (isGroup && budy != undefined) {
 	} else {
 	console.log(color('[TEXT]', 'red'), 'SELF-MODE', color(sender.split('@')[0]))

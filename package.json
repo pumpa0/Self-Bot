@@ -21,6 +21,8 @@
     "emoji-api": "^1.0.2",
     "file-type": "^16.3.0",
     "fluent-ffmpeg": "^2.1.2",
+    "form-data": "^4.0.0",
+    "fs-extra": "^10.0.0",
     "g-i-s": "^2.1.6",
     "got": "^11.8.2",
     "hxz-api": "^1.0.1",
@@ -38,6 +40,7 @@
     "request": "^2.88.2",
     "scraper-instagram": "^1.0.17",
     "spinnies": "^0.5.1",
+    "tod-api": "^1.0.5",
     "yt-search": "^2.7.6"
   },
   "scripts": {
