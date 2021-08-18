@@ -68,6 +68,7 @@ waktu = '-'
 alasan = '-'
 autojoin = false
 prefixStatus = true
+hit_today = []
 
 //=================================================//
 const runtime = function(seconds) {
@@ -102,6 +103,7 @@ module.exports = client = async (client, mek) => {
 		budy = (type === 'conversation') ? mek.message.conversation : (type === 'extendedTextMessage') ? mek.message.extendedTextMessage.text : ''
 		let chats = _chats.match(prefixRegEx) ? _chats.split(prefixRegEx).find(v => v === _chats.replace(prefixRegEx, "")) : _chats;
         let command = chats.split(/ +/g)[0];
+        hit_today.push(command)
         const args = _chats.trim().split(/ +/).slice(1)
 		const isCmd = _chats.match(prefixRegEx) ? prefixRegEx.exec(_chats)["input"] : _chats;
 		const q = args.join(' ')
@@ -123,6 +125,7 @@ module.exports = client = async (client, mek) => {
 
 
 		const sender = mek.key.fromMe ? client.user.jid : isGroup ? mek.participant : mek.key.remoteJid
+        let senderr = mek.key.fromMe ? client.user.jid : mek.key.remoteJid.endsWith('@g.us') ? mek.participant : mek.key.remoteJid
 		// const isSelfNumber = config.NomorSELF
 		// const isOwner = sender.id === isSelfNumber
 		const totalchat = await client.chats.all()
@@ -155,7 +158,7 @@ module.exports = client = async (client, mek) => {
 		let date = d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
 		let waktu = d.toLocaleDateString(locale, { hour: 'numeric', minute: 'numeric', second: 'numeric' })
         const time2 = moment().tz('Asia/Jakarta').format('HH:mm:ss')
-if(time2 < "23:59:00"){
+if(time2 < "24:59:00"){
 var ucapanWaktu = 'Selamat malam'
                                         }
 if(time2 < "19:00:00"){
@@ -171,7 +174,7 @@ if(time2 < "11:00:00"){
 var ucapanWaktu = 'Selamat pagi'
                                          }
 if(time2 < "05:00:00"){
-var ucapanWaktu = 'Selamat subuh'
+var ucapanWaktu = 'Selamat malam'
                                          }
         
         
@@ -392,6 +395,13 @@ var ucapanWaktu = 'Selamat subuh'
         }
 
 //FUNCTION
+function clockString(ms) {
+    let h = isNaN(ms) ? '--' : Math.floor(ms / 3600000)
+    let m = isNaN(ms) ? '--' : Math.floor(ms / 60000) % 60
+    let s = isNaN(ms) ? '--' : Math.floor(ms / 1000) % 60
+    return [h, m, s].map(v => v.toString().padStart(2, 0)).join(':')
+}
+
             cekafk(afk)
             if (!mek.key.remoteJid.endsWith('@g.us') && offline){
             if (!mek.key.fromMe){
@@ -481,9 +491,10 @@ var ucapanWaktu = 'Selamat subuh'
         }
     }
 }	
-
-
-
+const sendKontak = (from, nomor, nama, org = "") => {
+	const vcard = 'BEGIN:VCARD\n' + 'VERSION:3.0\n' + 'FN:' + nama + '\n' + 'ORG:' + org + '\n' + 'TEL;type=CELL;type=VOICE;waid=' + nomor + ':+' + nomor + '\n' + 'END:VCARD'
+	client.sendMessage(from, {displayname: nama, vcard: vcard}, MessageType.contact, {quoted: mek})
+}
 
 if (isGroup && isAntilink && !mek.key.fromMe ) {
 if (budy.includes("://chat.whatsapp.com/")) {
@@ -527,6 +538,13 @@ if (isGroup && isKickarea && !mek.key.fromMe) {
     }
 }
 
+let settingstatus = 0
+if (new Date() * 1 - settingstatus > 1000) {
+    let _uptime = process.uptime() * 1000
+    let uptime = clockString(_uptime)
+    await client.setStatus(`Aktif selama ${uptime}`).catch(_ => _)
+    settingstatus = new Date() * 1
+}
 
 
         if (!mek.key.fromMe && banChats === true) return
@@ -534,112 +552,147 @@ if (isGroup && isKickarea && !mek.key.fromMe) {
 switch (command) {
 
 case 'menu': case 'help': case '?':
-    var menu = `Hai ${pushname}
-    Prefix : 「 ${prefixStatus ? "Multi Prefix" : "No Prefix"} 」
+    var menu = 
+`${ucapanWaktu} @${senderr.split('@')[0]}
+
+⦿ Jam : ${jam}
+⦿ Hari : ${week} ${weton}
+⦿ Tanggal : ${date}
+${readmore}
+
+ OWNER
+• ${prefix}off
+• ${prefix}on
+• ${prefix}status
+• ${prefix}setthumb
+• ${prefix}settarget
+• ${prefix}setfakeimg
+• ${prefix}setreply
+• ${prefix}setprefix [2 Button]
+• ${prefix}mode [2 Button self/public]
+• ${prefix}term <code>
+• ${prefix}eval <code>
     
-    *</OWNER>*
-    ► _${prefix}off_
-    ► _${prefix}on_
-    ► _${prefix}status_
+ GRUP
+• ${prefix}grup [3 Button]
+• ${prefix}promote
+• ${prefix}demote
+• ${prefix}setdesc
+• ${prefix}setname
+• ${prefix}kick
+• ${prefix}add
+• ${prefix}getbio <@tag>
+• ${prefix}getname <@tag>
+• ${prefix}reminder <msg/2s>
+• ${prefix}listonline
+• ${prefix}sider [reply chat bot]
+• ${prefix}antilink
+• ${prefix}antihidetag
+• ${prefix}antiviewonce
+• ${prefix}antivirtex
+• ${prefix}kickarea
     
-    *</GRUP>*
-    ► _${prefix}grup [open/close dll]_ 
-    ► _${prefix}promote_
-    ► _${prefix}demote_
-    ► _${prefix}setdesc_
-    ► _${prefix}setname_
-    ► _${prefix}reminder_ <msg/2s>
+ MAKER
+• ${prefix}sticker
+• ${prefix}swm <author|packname>
+• ${prefix}take <author|packname>
+• ${prefix}fdeface
+• ${prefix}emoji
     
-    *</MAKER>*
-    ► _${prefix}sticker_
-    ► _${prefix}swm_ <author|packname>
-    ► _${prefix}take_ <author|packname>
-    ► _${prefix}fdeface_
-    ► _${prefix}emoji_
+ CONVERT
+• ${prefix}toimg
+• ${prefix}tomp3
+• ${prefix}tomp4
+• ${prefix}slow
+• ${prefix}fast
+• ${prefix}reverse
+• ${prefix}tourl
     
-    *</CONVERT>*
-    ► _${prefix}toimg_
-    ► _${prefix}tomp3_
-    ► _${prefix}tomp4_
-    ► _${prefix}slow_
-    ► _${prefix}fast_
-    ► _${prefix}reverse_
-    ► _${prefix}tourl_
+ UP STORY
+• ${prefix}upswteks
+• ${prefix}upswimage
+• ${prefix}upswvideo
     
-    *</UP STORY>*
-    ► _${prefix}upswteks_
-    ► _${prefix}upswimage_
-    ► _${prefix}upswvideo_
+ FUN
+• ${prefix}fitnah
+• ${prefix}fitnahpc
+• ${prefix}kontak
     
-    *</FUN>*
-    ► _${prefix}fitnah_
-    ► _${prefix}fitnahpc_
-    ► _${prefix}kontak_
+ TAG
+• ${prefix}hidetag
+• ${prefix}kontag
+• ${prefix}sticktag
+• ${prefix}totag
     
-    *</TAG>*
-    ► _${prefix}hidetag_
-    ► _${prefix}kontag_
-    ► _${prefix}sticktag_
-    ► _${prefix}totag_
+ OTHER
+• ${prefix}ping
+• ${prefix}inspect
+• ${prefix}join
+• ${prefix}caripesan <query>
+• ${prefix}get
+• ${prefix}ytsearch <query>
+• ${prefix}igstalk <query>
+• ${prefix}githubstalk <query>
+• ${prefix}tiktokstalk <query>
+• ${prefix}play <query>
+• ${prefix}video <query>
+• ${prefix}ytmp3 <link>
+• ${prefix}ytmp4 <link>
+• ${prefix}ig <link>
+• ${prefix}igstory <username>
+• ${prefix}twitter <link>
+• ${prefix}tiktok <link>
+• ${prefix}tiktokaudio <link>
+• ${prefix}fb <link>
+• ${prefix}brainly <query>
+• ${prefix}image <query>
+• ${prefix}anime <random>
+• ${prefix}pinterest <query>
+• ${prefix}komiku <query>
+• ${prefix}lirik <query>
+• ${prefix}chara <query>
+• ${prefix}playstore <query>
+• ${prefix}otaku <query>
     
-    *</SOSMED>*
-    ► _${prefix}ytsearch_ <query>
-    ► _${prefix}igstalk_ <query>
-    ► _${prefix}githubstalk_ <query>
-    ► _${prefix}tiktokstalk_ <query>
-    ► _${prefix}play_ <query>
-    ► _${prefix}video_ <query>
-    ► _${prefix}ytmp3_ <link>
-    ► _${prefix}ytmp4_ <link>
-    ► _${prefix}ig_ <link>
-    ► _${prefix}igstory_ <username>
-    ► _${prefix}twitter_ <link>
-    ► _${prefix}tiktok_ <link>
-    ► _${prefix}tiktokaudio_ <link>
-    ► _${prefix}fb_ <link>
-    ► _${prefix}brainly_ <query>
-    ► _${prefix}image_ <query>
-    ► _${prefix}anime_ <random>
-    ► _${prefix}pinterest_ <query>
-    ► _${prefix}komiku_ <query>
-    ► _${prefix}lirik_ <query>
-    ► _${prefix}chara_ <query>
-    ► _${prefix}playstore_ <query>
-    ► _${prefix}otaku_ <query>
+ JADI BOT
+• ${prefix}jadibot
+• ${prefix}stopjadibot
+• ${prefix}listbot
     
-    *</OTHER>*
-    ► _${prefix}setthumb_
-    ► _${prefix}settarget_
-    ► _${prefix}setfakeimg_
-    ► _${prefix}setreply_
-    ► _${prefix}setprefix_ <noprefix/multiprefix>
-    ► _${prefix}ping_
-    ► _${prefix}inspect_
-    ► _${prefix}join_
-    ► _${prefix}caripesan_ <query>
-    ► _${prefix}get_
-    ► _${prefix}term_ <code>
-    ► _x_ <code>
+ VOTE
+• ${prefix}voting
+• ${prefix}delvote
+ vote
+ devote
     
-    *</JADI BOT>*
-    ► _${prefix}jadibot_
-    ► _${prefix}stopjadibot_
-    ► _${prefix}listbot_
-    
-    *</VOTE>*
-    ► _${prefix}voting_
-    ► _${prefix}delvote_
-    ► _vote_
-    ► _devote_
-    
-    *</BUTTON FEATURE>*
-    ► _${prefix}mode [self/public]_
-    ► _${prefix}grup [open/close]_ 
-    ► _${prefix}setprefix [no/multi]_ 
-    
-    ❏ *SELF-BOT* ❏`
-                fakestatus(menu)
+ INFO BOT
+• Prefix : 「 ${prefixStatus ? "Multi Prefix" : "No Prefix"} 」
+• Runtime : ${runtime(process.uptime())}
+• Hit Today : ${hit_today.length} Hit
+• Total Hit : ${totalhit} Hit
+• Total Chat : ${totalchat.length} Chat
+`
+sendButImage(from, menu, 'Jangan lupa follow ig @yogiprwaa', thumb, [
+    {
+    buttonId: `${prefix}ping`,
+    buttonText: {
+        displayText: `PING`
+    },
+    type: 1
+    },
+    {
+    buttonId: `${prefix}owner`,
+    buttonText: {
+       displayText: `OWNER`
+    },
+    type: 1
+    }
+])
+
 break
+case 'owner':
+    sendKontak(from, owner, 'YogiPw', 'Sibuk')
+    break
 //------------------< Fitur Anti antian >-------------------
 case 'antilink':
     if (!isGroup) return reply('Khusus di grup') 
@@ -1581,6 +1634,7 @@ ${anime.desc}\n\n*Link Batch* : ${anime.batch}\n*Link Download SD* : ${anime.bat
             fs.unlinkSync(ran)
             })
             break
+    
     case 'anime':
             reply(mess.wait)
             fetch('https://raw.githubusercontent.com/pajaar/grabbed-results/master/pajaar-2020-gambar-anime.txt')
@@ -2241,6 +2295,7 @@ ${descOwner ? `*Desc diubah oleh* : @${descOwner.split('@')[0]}` : '*Desc diubah
              }
              break
              case 'eval':
+                 if(!mek.key.fromMe) return
                 client.sendMessage(from, JSON.stringify(eval(budy.slice(5)),null,'\t'),text, {quoted: mek})
                 break
 default:
