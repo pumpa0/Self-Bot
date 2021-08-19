@@ -6,9 +6,6 @@
 </div>
 
 <p align="center">
-<a href="##"><img title="tod-api" src="https://img.shields.io/static/v1?label=package&message=tod-api&color=red"></a>
-</p>
-<p align="center">
   <a href="https://github.com/yogipw"><img title="Author" src="https://img.shields.io/badge/Author-yogipw-red.svg?style=for-the-badge&logo=github" /></a>
 </p>
 <p align="center">
