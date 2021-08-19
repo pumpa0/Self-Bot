@@ -918,7 +918,6 @@ module.exports = client = async (client, mek) => {
     if (
       isGroup &&
       isAntiviewonce &&
-      !mek.key.fromMe &&
       m.mtype == "viewOnceMessage"
     ) {
       reply(
@@ -1145,7 +1144,7 @@ ${readmore}
               "base64"
             );
           addCmd(kodenya, q);
-          textImg("Done!");
+          fakestatus("Done!");
         } else {
           reply("tag stickenya");
         }
@@ -1159,7 +1158,7 @@ ${readmore}
           );
         _scommand.splice(getCommandPosition(kodenya), 1);
         fs.writeFileSync("./database/scommand.json", JSON.stringify(_scommand));
-        textImg("Done!");
+        fakestatus("Done!");
         break;
       case "listcmd":
         teksnyee = `\`\`\`「 LIST STICKER CMD 」\`\`\``;
