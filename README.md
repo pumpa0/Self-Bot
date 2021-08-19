@@ -12,7 +12,7 @@
   <a href="https://github.com/yogipw"><img title="Author" src="https://img.shields.io/badge/Author-yogipw-red.svg?style=for-the-badge&logo=github" /></a>
 </p>
 <p align="center">
-<a href="#"><img title="mengapi" src="https://img.shields.io/static/v1?label=FREE&message=tod-api&color=pink"></a>
+<a href="#"><img title="mengapi" src="https://img.shields.io/static/v1?label=FREE&message=SELF_BOT&color=red"></a>
 </p>
 
 # Requirements
@@ -52,5 +52,5 @@
 
 # Thanks To
 * [`Baileys`](https://github.com/adiwajshing/Baileys)
-* [`Dah gaada lagi`](https://github.com/yogipw)
+* [`Hexagonz`](https://github.com/hexagonz)
 
